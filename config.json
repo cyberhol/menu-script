@@ -1,0 +1,28 @@
+{
+    "items": [
+        {
+            "id": "24",
+            "access": "Company Name",
+            "provider": "Private",
+            "user": "User Name",
+            "title": "List Users Company Name",
+            "command": "aws iam list-users --query 'Users[*].{UserName:UserName, UserId:UserId, Arn:Arn, CreateDate:CreateDate, PasswordLastUsed:PasswordLastUsed}' --output table"
+        },
+        {
+            "id": "28",
+            "access": "Company Name",
+            "provider": "Private",
+            "user": "User Name",
+            "title": "List S3 Buckets",
+            "command": "aws s3 ls"
+        },
+        {
+            "id": "130",
+            "access": "AO LLC",
+            "provider": "Anthropic",
+            "user": "User Name",
+            "title": "Anthropic Prompt Library",
+            "command": "https://docs.anthropic.com/en/prompt-library/library"
+        }
+    ]
+}

@@ -1,0 +1,317 @@
+#!/usr/bin/env bash
+# User Name 2024.09.16
+# Menu Script for Command Line items for AWS and URL in Default Browser
+# Supports both macOS and Linux with improved configuration management
+
+# Determine the script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source the user configuration
+if [ -f "$HOME/.config/menu-script/user_config.sh" ]; then
+    source "$HOME/.config/menu-script/user_config.sh"
+elif [ -f "$HOME/Library/Application Support/menu-script/user_config.sh" ]; then
+    source "$HOME/Library/Application Support/menu-script/user_config.sh"
+else
+    echo "Configuration file not found. Please run the install script."
+    exit 1
+fi
+
+CONFIG_FILE="$CONFIG_DIR/config.json"
+
+SCRIPTS_DIR="scripts"
+AWS_PROFILE=""
+
+# Function to display usage
+usage() {
+    echo "Usage: $(basename $0) [-h|--help] [-i|--item ID] [-s|--script SCRIPT_NAME] [SCRIPT_ARGS...]"
+    echo "Options:"
+    echo "  -h, --help              Display this help message"
+    echo "  -i, --item ID           Execute a specific menu item"
+    echo "  -s, --script SCRIPT     Execute a specific script from the scripts directory"
+    echo "  SCRIPT_ARGS             Arguments to pass to the specified script"
+    echo
+    echo "When run without arguments, the script launches in interactive mode."
+}
+
+# Function to check if a command exists
+command_exists() {
+    if ! $(command -v "$1" >/dev/null 2>&1); then
+        echo "Error: $1 is not installed. Please install it and try again."
+        exit 1
+    fi
+}
+
+# Ensure configuration directory exists
+mkdir -p "$CONFIG_DIR"
+
+# Function to read JSON config
+function read_json_config() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        # Create default configuration
+        cp ../config.json "$CONFIG_FILE"
+    fi
+    
+    # Read and parse JSON config
+    ITEMS=$(jq -r '.items[] | "\(.id)|\(.access)|\(.provider)|\(.user)|\(.title)|\(.command)"' "$CONFIG_FILE")
+}
+
+# Function to write JSON config
+function write_json_config() {
+    local json_items=""
+    while IFS='|' read -r id access provider user title command; do
+        [[ -z "$id" ]] && continue
+        json_items+="{\"id\":\"$id\",\"access\":\"$access\",\"provider\":\"$provider\",\"user\":\"$user\",\"title\":\"$title\",\"command\":\"$command\"},"
+    done <<< "$ITEMS"
+    json_items=${json_items%,}  # Remove trailing comma
+    
+    echo "{\"items\":[$json_items]}" | jq '.' > "$CONFIG_FILE"
+}
+
+# Function to set AWS profile
+function set_aws_profile() {
+    read -p "Enter AWS profile name (leave blank for default): " new_profile
+    if [ -n "$new_profile" ]; then
+        AWS_PROFILE="$new_profile"
+        echo "AWS profile set to: $AWS_PROFILE"
+    else
+        AWS_PROFILE=""
+        echo "AWS profile set to default"
+    fi
+    read -p "Press Enter to continue..."
+}
+
+# Function to list and execute scripts
+list_scripts() {
+    echo "Available scripts:"
+    local i=1
+    for script in "$SCRIPTS_DIR"/*.sh; do
+        if [ -f "$script" ]; then
+            echo "$i) $(basename "$script")"
+            i=$((i+1))
+        fi
+    done
+    echo "Enter the number of the script to execute, or 'q' to return to main menu:"
+    read choice
+
+    if [[ "$choice" =~ ^[0-9]+$ ]]; then
+        local script=$(ls "$SCRIPTS_DIR"/*.sh | sed -n "${choice}p")
+        if [ -f "$script" ]; then
+            echo "Do you want to see the usage information for this script? (y/n)"
+            read show_usage
+            if [[ "$show_usage" == "y" ]]; then
+                bash "$script" --help
+                echo
+            fi
+            echo "Enter arguments for the script (or press enter for none):"
+            read args
+            bash "$script" $args
+            read -p "Press Enter to continue..."
+        else
+            echo "Invalid selection."
+            read -p "Press Enter to continue..."
+        fi
+    elif [[ "$choice" == "q" ]]; then
+        return
+    else
+        echo "Invalid input."
+        read -p "Press Enter to continue..."
+    fi
+}
+
+# Function to display the menu
+function show_menu() {
+    # Remove the clear command because I did not like... also adding support for multiple support
+    printf "%-5s %-15s %-15s %-15s %-40s\n" "ID" "Access" "Provider" "User" "Title"
+    echo "--------------------------------------------------------------------------------------------------------"
+    echo "$ITEMS" | while IFS='|' read -r id access provider user title command; do
+        printf "%-5s %-15s %-15s %-15s %-40s\n" "$id" "$access" "$provider" "$user" "$title"
+    done
+    echo "--------------------------------------------------------------------------------------------------------"
+    echo "Enter ID to select an item, A to add a new item, E to edit an item, D to delete an item, P to set AWS profile, S to list scripts, C to clear, X to exit."
+    if [ -n "$AWS_PROFILE" ]; then
+        echo "Current AWS profile: $AWS_PROFILE"
+    fi
+}
+
+function execute_choice() {
+    local choice="$1"
+    case "$choice" in
+        [Cc]) clear && return ;;
+        [Xx]) echo "Exiting..."; exit 0 ;;
+        [Aa]) add_item ;;
+        [Ee]) edit_item ;;
+        [Dd]) delete_item ;;
+        [Pp]) set_aws_profile ;;
+        [Ss]) list_scripts ;;
+        [0-9]*)
+            local found=0
+            while IFS='|' read -r id access provider user title command; do
+                if [[ "$id" == "$choice" ]]; then
+                    found=1
+                    echo "----------------------------------------"
+                    echo "ID: $id"
+                    echo "Access: $access"
+                    echo "Provider: $provider"
+                    echo "User: $user"
+                    echo "Title: $title"
+                    echo "Command: $command"
+                    echo "----------------------------------------"
+                    echo "Executing..."
+                    echo "----------------------------------------"
+                    if [[ "$command" =~ ^https?:// ]]; then
+                        if [ -n "$BROWSER" ]; then
+                            $BROWSER "$command"
+                        elif command -v xdg-open &> /dev/null; then
+                            xdg-open "$command"
+                        elif command -v open &> /dev/null; then
+                            open "$command"
+                        else
+                            echo "Unable to open URL. No suitable browser command found."
+                        fi
+                        echo "Opened URL in browser: $command"
+                    else
+                        # Append AWS profile to AWS commands
+                        if [[ "$command" =~ ^aws && -n "$AWS_PROFILE" ]]; then
+                            command="$command --profile $AWS_PROFILE"
+                        fi
+                        eval "$command"
+                        echo "Command execution completed."
+                    fi
+                    echo "----------------------------------------"
+                    read -p "Press Enter to continue..."
+                    return
+                fi
+            done <<< "$ITEMS"
+            if [[ "$found" -eq 0 ]]; then
+                echo "Invalid ID."
+                read -p "Press Enter to continue..."
+            fi
+            ;;
+        *) echo "Invalid input."; read -p "Press Enter to continue..." ;;
+    esac
+}
+
+# Function to add a new item
+function add_item() {
+    echo "Adding a new item:"
+    read -p "ID: " new_id
+    read -p "Access: " new_access
+    read -p "Provider: " new_provider
+    read -p "User: " new_user
+    read -p "Title: " new_title
+    read -p "Command: " new_command
+    
+    ITEMS+="
+$new_id|$new_access|$new_provider|$new_user|$new_title|$new_command"
+    
+    write_json_config
+    echo "New item added successfully."
+    read -p "Press Enter to continue..."
+}
+
+# Function to edit an existing item
+function edit_item() {
+    read -p "Enter the ID of the item to edit: " edit_id
+    local temp_items=""
+    local found=0
+    
+    while IFS='|' read -r id access provider user title command; do
+        if [[ "$id" == "$edit_id" ]]; then
+            found=1
+            echo "Editing item with ID $id:"
+            read -p "Access [$access]: " new_access
+            read -p "Provider [$provider]: " new_provider
+            read -p "User [$user]: " new_user
+            read -p "Title [$title]: " new_title
+            read -p "Command [$command]: " new_command
+            
+            access=${new_access:-$access}
+            provider=${new_provider:-$provider}
+            user=${new_user:-$user}
+            title=${new_title:-$title}
+            command=${new_command:-$command}
+        fi
+        temp_items+="$id|$access|$provider|$user|$title|$command
+"
+    done <<< "$ITEMS"
+    
+    if [[ "$found" -eq 1 ]]; then
+        ITEMS="$temp_items"
+        write_json_config
+        echo "Item updated successfully."
+    else
+        echo "Item with ID $edit_id not found."
+    fi
+    read -p "Press Enter to continue..."
+}
+
+# Function to delete an item
+function delete_item() {
+    read -p "Enter the ID of the item to delete: " delete_id
+    local temp_items=""
+    local found=0
+    
+    while IFS='|' read -r id access provider user title command; do
+        if [[ "$id" != "$delete_id" ]]; then
+            temp_items+="$id|$access|$provider|$user|$title|$command
+"
+        else
+            found=1
+        fi
+    done <<< "$ITEMS"
+    
+    if [[ "$found" -eq 1 ]]; then
+        ITEMS="$temp_items"
+        write_json_config
+        echo "Item deleted successfully."
+    else
+        echo "Item with ID $delete_id not found."
+    fi
+    read -p "Press Enter to continue..."
+}
+
+# Main script
+if [[ $# -gt 0 ]]; then
+    # Non-interactive mode
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -i|--item)
+                command_exists jq
+                command_exists aws
+                read_json_config
+                execute_choice "$2"
+                exit 0
+                ;;
+            -s|--script)
+                script="$SCRIPTS_DIR/$2"
+                if [[ -f "$script" ]]; then
+                    shift 2
+                    bash "$script" "$@"
+                else
+                    echo "Script not found: $2"
+                    exit 1
+                fi
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+else
+    # Interactive mode
+    command_exists jq
+    read_json_config
+    while true; do
+        show_menu
+        read -p "Enter your choice: " choice
+        execute_choice "$choice"
+    done
+fi
