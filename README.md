@@ -1,6 +1,6 @@
 # Menu Script
 
-A powerful and customizable CLI menu for managing and executing various scripts and commands, with a focus on AWS operations but it can be anything really. Inspired by @omacox's unique ideas at [omacox/Scripts-and-Stuff](https://github.com/omacox/Scripts-and-Stuff). Please note that this repository will not stay public as I'll start adding member-only functionality.
+A powerful and customizable CLI menu for managing and executing various scripts and commands, with a focus on AWS operations but it can be anything really. Inspired by [@omacox](https://github.com/omacox)'s unique ideas at [omacox/Scripts-and-Stuff](https://github.com/omacox/Scripts-and-Stuff). Please note that this repository will not stay public as I'll start adding member-only functionality.
 
 ## File Structure
 
@@ -33,7 +33,7 @@ cyberhol/menu-script/
 
 1. Clone the repository:
    ```
-   git clone https://github.com/cyberhol/menu-script.git
+   git git@github.com:cyberhol/menu-script.git
    cd menu-script
    ```
 
@@ -142,7 +142,7 @@ Feel free to answer questions and improve the code by submitting a pull request.
 
 ## A Bunch of Scripts
 
-[menu1.sh](https://github.com/omacox/Scripts-and-Stuff/blob/main/code/menu1.sh) by @omacox
+[menu1.sh](https://github.com/omacox/Scripts-and-Stuff/blob/main/code/menu1.sh) by [@omacox](https://github.com/omacox)
 
 ### menu1.sh
 
