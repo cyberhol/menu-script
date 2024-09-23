@@ -87,6 +87,8 @@ AWS_PROFILE="$AWS_PROFILE"
 BROWSER="$BROWSER"
 EOL
 
+cp config.json "$CONFIG_DIR/config.json"
+
 echo "Installation completed. You can now run 'menu-script' from anywhere."
 echo "Your scripts are installed in $SCRIPTS_DIR"
 echo "Configuration is stored in $CONFIG_DIR/user_config.sh"

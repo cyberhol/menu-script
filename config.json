@@ -14,7 +14,7 @@
             "provider": "Private",
             "user": "User Name",
             "title": "List all custom policies",
-            "command": "aws iam list-policies --scope Local --query 'Policies[*].Arn' --output text"
+            "command": "aws iam list-policies --scope Local --query 'Policies[*].Arn' --output table"
         },
         {
             "id": "28",
