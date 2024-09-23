@@ -10,6 +10,7 @@ granularity="MONTHLY"
 metric="UsageQuantity"
 group_by="SERVICE"
 output_format="table"
+aws_profile="default"
 
 # Function to display usage
 usage() {
@@ -21,6 +22,7 @@ usage() {
     echo "  -m, --metric METRIC           Metric to use (default: UsageQuantity)"
     echo "  -b, --group-by KEY            Group by: SERVICE|USAGE_TYPE|etc. (default: SERVICE)"
     echo "  -o, --output FORMAT           Output format: table|json|text (default: table)"
+    echo "  -p, --profile PROFILE         AWS profile to use (default: default)"
     echo "  -h, --help                    Display this help message"
 }
 
@@ -52,6 +54,10 @@ while [[ $# -gt 0 ]]; do
             output_format="$2"
             shift 2
             ;;
+        -p|--profile)
+            aws_profile="$2"
+            shift 2
+            ;;
         -h|--help)
             usage
             exit 0
@@ -71,4 +77,5 @@ aws ce get-cost-and-usage \
     --metrics "$metric" \
     --group-by Type=DIMENSION,Key=$group_by \
     --query "ResultsByTime[].Groups[?Metrics.$metric.Amount!='0'].[Keys[0],Metrics.$metric.Amount]" \
-    --output $output_format
+    --output $output_format \
+    --profile $aws_profile
