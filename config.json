@@ -9,6 +9,14 @@
             "command": "aws iam list-users --query 'Users[*].{UserName:UserName, UserId:UserId, Arn:Arn, CreateDate:CreateDate, PasswordLastUsed:PasswordLastUsed}' --output table"
         },
         {
+            "id": "25",
+            "access": "Company Name",
+            "provider": "Private",
+            "user": "User Name",
+            "title": "List all custom policies",
+            "command": "aws iam list-policies --scope Local --query 'Policies[*].Arn' --output text"
+        },
+        {
             "id": "28",
             "access": "Company Name",
             "provider": "Private",
